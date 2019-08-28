@@ -10,9 +10,6 @@ function getClinicDoc(body){
   if(!body.address) throw new CustomError(400,'InvalidRequest','É preciso enviar um endereço')
   doc.address = {}
 
-  if(!body.address.country) throw new CustomError(400,'InvalidRequest','É preciso enviar um endereço valido')
-  doc.address.country = body.address.country
-  
   if(!body.address.state) throw new CustomError(400,'InvalidRequest','É preciso enviar um endereço valido')
   doc.address.state = body.address.state
   
@@ -84,9 +81,6 @@ function updateClinicDoc(clinic, body) {
   if(body.name)
     clinic.name = body.name
   if(body.address){
-    if(body.address.country)
-      clinic.address.country = body.address.country
-    
     if(body.address.state)
       clinic.address.state = body.address.state
     

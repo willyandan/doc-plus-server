@@ -7,7 +7,6 @@ const model = new Schema({
     unique:true
   },
   address:{
-    country:String,
     state:String,
     city:String,
     street:String,
@@ -41,7 +40,6 @@ model.index({
 },{
   weights:{
     name:7,
-    'address.country':1,
     'address.state':1,
     'address.city':2,
     'address.street':3,
