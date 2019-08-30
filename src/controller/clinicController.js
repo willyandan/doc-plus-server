@@ -2,6 +2,7 @@ const CustomError = require('./CustomError')
 const debug = require('debug')('server:create')
 const express = require('express')
 const Clinic = require('../model/Clinic')
+const oauthController = require('./oauthController')
 
 function getClinicDoc(body){
   const doc = {}
@@ -61,7 +62,7 @@ function getClinicQuery(params){
   return query
 }
 
-function getClinicSearchQuery(q, coords=[]) {
+function getClinicSearchQuery(q, coords=[], ids=null) {
   let query = {
     $text:{
       $search:q
@@ -72,6 +73,10 @@ function getClinicSearchQuery(q, coords=[]) {
       }
     }
   }
+  if(ids){
+    query._id = {$in:ids}
+  }
+
   debug(query)
   return query
 }
@@ -145,6 +150,7 @@ module.exports.list = async function(req, res){
 /**
  * @param {express.request} req
  * @param {express.response} res
+ * TODO: PEGAR CONVENIO, PASSAR LISTA DE CLINICAS DO CONVENIO PARA A QUERY
  */
 module.exports.search = async function(req, res){
   try {
@@ -153,6 +159,8 @@ module.exports.search = async function(req, res){
     }
     let page = req.query.page || 1
     if(page <= 0) page = 1
+    const token = oauthController.getTokenData(req.token)
+    
     const query = getClinicSearchQuery(req.query.q, [req.query.lat, req.query.long])
     const clinics = await Clinic.find(query,{score: {$meta: "textScore"},})
       .sort({ score: { $meta: "textScore" } })
