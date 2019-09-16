@@ -4,9 +4,8 @@ const model = new Schema({
   name: String,
   users:[
     {
-      login:String,
-      senha:String,
-      role:mongoose.Types.ObjectId
+      user:String,
+      password:String, 
     }
   ],
   clinics:[

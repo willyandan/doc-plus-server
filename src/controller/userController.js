@@ -1,18 +1,20 @@
 const express = require('express')
 const User = require('../model/User')
+const Agreement = require('../model/Agreement')
 const Role = require('../model/Role')
 const CustomError = require('./CustomError')
 const oauthController = require('./oauthController')
 const debug = require('debug')('server:user')
-const bcrypt = require('bcrypt')
+const hashController = require('./hashController')
 
 function isEmail(email){
   return /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/.test(email)
 }
 
-function hashPassword(password){
-  const salt = bcrypt.genSaltSync(parseInt(process.env.BCRYPT_SALT))
-  return bcrypt.hashSync(password,salt)
+async function hasAgreement(agreement_id){
+  const agreement = await Agreement.findOne({_id:agreement_id})
+  if(agreement) return true
+  return false
 }
 
 async function validateUser(doc, id=null){
@@ -21,7 +23,7 @@ async function validateUser(doc, id=null){
     if(!doc.password) throw new CustomError(400,'InvalidRequest','É preciso cadastrar uma senha')
     if(!doc.name) throw new CustomError(400,'InvalidRequest','É preciso cadastrar um nome')
     if(!doc.birthDay) throw new CustomError(400,'InvalidRequest','É preciso cadastrar uma data de nascimento')
-    // if(!doc.agreement) throw new CustomError(400,'InvalidRequest','É preciso escolher um convenio')
+    if(!doc.agreement) throw new CustomError(400,'InvalidRequest','É preciso escolher um convenio')
     if(!isEmail(doc.email)) throw new CustomError(400,'InvalidRequest','É preciso cadastrar um email válido')
     if(!doc.address) throw new CustomError(400, 'InvalidRequest', 'É preciso cadastrar um endereço')
     if(!doc.address.state) throw new CustomError(400, 'InvalidRequest', 'É preciso escolher um estado')
@@ -33,10 +35,17 @@ async function validateUser(doc, id=null){
     
     const existsEmail = await User.exists({email:doc.email})
     if(existsEmail) throw new CustomError(400, 'DuplicateEmail', 'Esse email já está em uso por outro usuário')
+    const hasAgr = await hasAgreement(doc.agreement)
+    if(!hasAgr) throw new CustomError(404,'AgreementNotFound', 'Convenio não encontrado')
   }else{
     if(doc.email && !isEmail(doc.email)) throw new CustomError(400,'InvalidRequest','É preciso cadastrar um email válido')
     const existsEmail = await User.exists({email:doc.email, _id:{$ne:id}})
     if(existsEmail) throw new CustomError(400, 'DuplicateEmail', 'Esse email já está em uso por outro usuário')
+    
+    if(doc.agreement){
+      const hasAgr = await hasAgreement(doc.agreement)
+      if(!hasAgr) throw new CustomError(404,'AgreementNotFound', 'Convenio não encontrado')
+    }
   }
   
 
@@ -95,7 +104,7 @@ module.exports.create = async (req, res) =>{
   try {
     await validateUser(req.body)
     const user = new User(req.body)
-    user.password = hashPassword(user.password)
+    user.password = hashController.hashPassword(user.password)
     user.role = (await Role.find({name:'user'}).lean())._id
     await user.save()
     res.status(200).json(user).end()
@@ -153,7 +162,7 @@ module.exports.update = async (req, res) =>{
   try {
     await validateUser(req.body, req.params.id)
     if(req.body.password){
-      req.body.password = hashPassword(req.body.password)
+      req.body.password = hashController.hashPassword(req.body.password)
     }
     await User.findByIdAndUpdate({_id:req.params.id,},{...req.body})
     const user = await User.findOne({_id:req.params.id},{password:0}).lean()

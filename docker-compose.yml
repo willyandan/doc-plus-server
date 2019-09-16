@@ -3,5 +3,16 @@ services:
   app:
     build: .
     ports:
-      - "80:3000"
+      - "3000:3000"
+    volumes:
+      - '.:/src/app'
+      - '/src/app/node_modules'
+    links:
+      - mongo
+  mongo:
+    image: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: docPlus
+      MONGO_INITDB_ROOT_PASSWORD: Wwwlpda#1
     
