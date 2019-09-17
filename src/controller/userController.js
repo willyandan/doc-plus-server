@@ -255,7 +255,7 @@ module.exports.createMe = async (req, res) =>{
   try {
     await validateUser(req.body)
     const user = new User(req.body)
-    user.password = hashPassword(user.password)
+    user.password = hashController.hashPassword(user.password)
     user.role = (await Role.find({name:'user'}).lean())._id
     await user.save()
     delete user.password
@@ -319,7 +319,7 @@ module.exports.updateMe = async (req, res) => {
     const data = oauthController.getTokenData(token)
     await validateUser(req.body, data._id)
     if(req.body.password){
-      req.body.password = hashPassword(req.body.password)
+      req.body.password =  hashController.hashPassword(req.body.password)
     }
     await User.findByIdAndUpdate({_id:data._id,},{...req.body})
     const user = await User.findOne({_id:data._id},{password:0}).lean()
